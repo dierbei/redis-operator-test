@@ -1,2 +1,5 @@
-# redis-operator-test
-学习Operator开发~
+## 环境
+* Linux Centos7.6
+* Golang 1.16
+* Kubebuilder
+
