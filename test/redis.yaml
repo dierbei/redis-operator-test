@@ -1,0 +1,7 @@
+apiVersion: redis.hedui.com/v1
+kind: Redis
+metadata:
+  name: myhedui
+spec:
+  port: 7777
+  replicas: 2

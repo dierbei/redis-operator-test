@@ -1,0 +1,20 @@
+domain: hedui.com
+layout:
+- go.kubebuilder.io/v3
+projectName: redis-operator-demo
+repo: redis-demo
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: hedui.com
+  group: redis
+  kind: Redis
+  path: redis-demo/api/v1
+  version: v1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+version: "3"
