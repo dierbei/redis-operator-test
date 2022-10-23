@@ -21,6 +21,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	stdlog "log"
 	"redis-demo/service"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -36,6 +37,7 @@ import (
 type RedisReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Event  record.EventRecorder
 }
 
 //+kubebuilder:rbac:groups=redis.hedui.com,resources=redis,verbs=get;list;watch;create;update;patch;delete
@@ -63,6 +65,7 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if !obj.DeletionTimestamp.IsZero() {
+		r.Event.Event(obj, v1.EventTypeNormal, "Deleted", "删除资源")
 		return ctrl.Result{}, service.Delete(r.Client, obj)
 	}
 
@@ -89,7 +92,7 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		for i := len(podNameList); i < len(obj.Finalizers); i++ {
 			if err := r.Client.Delete(context.Background(), &v1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: obj.Finalizers[i],
+					Name:      obj.Finalizers[i],
 					Namespace: obj.Namespace,
 				},
 			}, &client.DeleteOptions{}); err != nil {
@@ -101,9 +104,11 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		obj.Finalizers = podNameList
 		isUpdate = true
 		stdlog.Println("副本数收缩成功.")
+		r.Event.Event(obj, v1.EventTypeNormal, "Replicas", "收缩副本")
 	}
 
 	if isUpdate {
+		r.Event.Event(obj, v1.EventTypeNormal, "Updated", "更新资源")
 		stdlog.Println("检测到资源更新:", obj.Finalizers)
 		if err := r.Update(context.Background(), obj); err != nil {
 			stdlog.Println(err)
