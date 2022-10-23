@@ -108,11 +108,16 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	if isUpdate {
-		r.Event.Event(obj, v1.EventTypeNormal, "Updated", "更新资源")
 		stdlog.Println("检测到资源更新:", obj.Finalizers)
 		if err := r.Update(context.Background(), obj); err != nil {
 			stdlog.Println(err)
 			return ctrl.Result{}, err
+		}
+		r.Event.Event(obj, v1.EventTypeNormal, "Updated", "更新资源")
+		obj.Status.Replicas = len(obj.Finalizers)
+		if err := r.Status().Update(context.Background(), obj, &client.UpdateOptions{}); err != nil {
+			stdlog.Println("更新 status 失败, err: ", err.Error())
+			return ctrl.Result{}, nil
 		}
 	}
 
