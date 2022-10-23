@@ -69,7 +69,7 @@ func GenPodName(prefix string, replicas int) []string {
 
 // RebuildPod 重建被删除的 Pod
 func RebuildPod(evt event.DeleteEvent, ltf workqueue.RateLimitingInterface) {
-	stdlog.Println("检测到有Pod删除，即将重建:", evt.Object.GetName())
+	stdlog.Println("检测到有Pod删除, Pod名称：", evt.Object.GetName())
 
 	for _, ref := range evt.Object.GetOwnerReferences() {
 		if ref.Kind == "Redis" && ref.APIVersion == "redis.hedui.com/v1" {

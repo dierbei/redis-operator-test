@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	stdlog "log"
 	"redis-demo/service"
@@ -82,7 +83,26 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
-	// 更新
+	// 检测到 apply 文件副本数小于当前副本数，执行删除操作
+	if len(podNameList) < len(obj.Finalizers) {
+		stdlog.Println("检测到副本数收缩操作.")
+		for i := len(podNameList); i < len(obj.Finalizers); i++ {
+			if err := r.Client.Delete(context.Background(), &v1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: obj.Finalizers[i],
+					Namespace: obj.Namespace,
+				},
+			}, &client.DeleteOptions{}); err != nil {
+				stdlog.Println("副本数缩小失败, err:", err.Error())
+				return ctrl.Result{}, err
+			}
+		}
+
+		obj.Finalizers = podNameList
+		isUpdate = true
+		stdlog.Println("副本数收缩成功.")
+	}
+
 	if isUpdate {
 		stdlog.Println("检测到资源更新:", obj.Finalizers)
 		if err := r.Update(context.Background(), obj); err != nil {
@@ -95,6 +115,7 @@ func (r *RedisReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 }
 
 // SetupWithManager sets up the controller with the Manager.
+// 监听创建出来的Pod
 func (r *RedisReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&redisv1.Redis{}).
